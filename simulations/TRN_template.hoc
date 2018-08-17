@@ -1,0 +1,126 @@
+begintemplate TRNcell 
+public soma
+create soma 
+proc init() {
+	create soma  
+	if (strcmp($s1, "traub2005") == 0) {   
+		soma { 
+			insert pas 
+			g_pas =   5.E-05
+			cm =   1.
+			
+			insert naf2
+			gbar_naf2 =   60E-3
+			insert napf
+			gbar_napf =   0.6E-3
+			insert kdr_fs
+			gbar_kdr_fs =   60E-3
+			insert kc
+			gbar_kc =   10E-3
+			insert ka
+			gbar_ka =   5E-3
+			insert km
+			gbar_km =   0.5E-3
+			insert k2
+			gbar_k2 =   0.5E-3
+			insert kahp_slower
+			gbar_kahp_slower =   0.1E-3
+			insert cal
+			gbar_cal =   0.5E-3
+			insert cat_a 
+			gbar_cat_a =  0.05E-3 // 2E-3
+			insert ar
+			gbar_ar =   0.025E-3
+			insert cad
+			beta_cad  =   0.02
+			phi_cad =   10400.
+			ceiling_cad = 1e6
+			
+			ek =  -100.
+			e_pas =  -75.
+			ena =   50.
+			vca =   125.
+			erev_ar =  -40.
+		} 
+	} 
+	if (strcmp($s1, "haas2012") == 0) { 
+		soma { 
+			insert pas 
+			g_pas =   0.1E-3
+			cm =   1
+			
+			insert naf2
+			gbar_naf2 =   60.5E-3
+			insert kdr_fs
+			gbar_kdr_fs =   60E-3
+			insert ka
+			gbar_ka =   5E-3
+			insert k2
+			gbar_k2 =   0.5E-3
+			insert cat_a 
+			gbar_cat_a =  0.75E-3
+			insert ar
+			gbar_ar =   0.025E-3
+			
+			ek =  -100.
+			e_pas =  -75.
+			ena =   50.
+			vca =   125.
+			erev_ar =  -40.
+		} 
+	}
+	
+	if (strcmp($s1, "phamhaas") == 0) { 
+		soma { 
+			insert pas 
+			g_pas =   0.06E-3
+			cm =   1
+			
+			insert naf2
+			gbar_naf2 =   60.5E-3
+			insert kdr_fs
+			gbar_kdr_fs =   60E-3
+			insert ka
+			gbar_ka =   5E-3
+			insert k2
+			gbar_k2 =   0.5E-3
+			insert cat_a 
+			gbar_cat_a =  0.67E-3
+			insert ar
+			gbar_ar =   0.025E-3
+			
+			ek =  -100.
+			e_pas =  -75.
+			ena =   50.
+			vca =   125.
+			erev_ar =  -40.
+		} 
+	}
+	if (strcmp($s1, "handtuned") == 0) { 
+		soma { 
+			insert pas 
+			g_pas =   0.1E-3
+			cm =   1
+			
+			insert naf2
+			gbar_naf2 =   60.5E-3
+			insert kdr_fs
+			gbar_kdr_fs =   60E-3
+			insert ka
+			gbar_ka =   5E-3
+			insert k2
+			gbar_k2 =   0.5E-3
+			insert cat_a 
+			gbar_cat_a =  0.67E-3
+			insert ar
+			gbar_ar =   0.025E-3
+			
+			ek =  -100.
+			e_pas =  -75.
+			ena =   50.
+			vca =   125.
+			erev_ar =  -40.
+		} 
+	}
+} 
+endtemplate TRNcell

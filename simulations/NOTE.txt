@@ -1,0 +1,11 @@
+From Traub 2005 - NEURON implementation on ModelDB (https://senselab.med.yale.edu/modeldb/showModel.cshtml?model=45539)
+'ar', 'cad', 'cal', 'cat', 'cat_a', 'k2', 'ka', 'kahp_deeppyr', 'kahp_slower', 'kc',
+'kdr', 'kdr_fs', 'km', 'naf', 'naf2', 'naf_tcr', 'nap', 'napf', 'napf_tcr', 'ampa', 
+
+However, only used 
+'ar', 'cat', 'cat_a', 'k2', 'ka', 'kdr', 'kdr_fs', 'naf2', 'naf_tcr', 'ampa' 
+
+AMPA synapse template was used to model GABA synapse with modified E_rev and tau, because we wanted 
+a rise + fall time implementation for IPSP 
+
+Also need VecStim from https://www.neuron.yale.edu/ftp/ted/neuron/vecevent.mod

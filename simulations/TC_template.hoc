@@ -1,0 +1,75 @@
+begintemplate TCcell  
+public soma 
+create soma 
+proc init() { 
+	create soma 
+	if (strcmp($s1, "traub2005") == 0) {   
+		soma { 
+			insert pas 
+			g_pas =  3.78787879E-05
+			cm = 0.9
+			
+			insert naf_tcr
+			gbar_naf_tcr =   100.E-3
+			insert napf_tcr
+			gbar_napf_tcr =   0.2E-3
+			insert kdr
+			gbar_kdr =   33.75E-3
+			insert kc
+			gbar_kc =   12E-3
+			insert ka
+			gbar_ka =   6E-3
+			insert km
+			gbar_km =   0.5e-3
+			insert k2
+			gbar_k2 =   2E-3
+			insert kahp_slower
+			gbar_kahp_slower =  0.05E-3
+			insert cal
+			gbar_cal =   0.5E-3
+			insert cat
+			gbar_cat =   0.5E-3
+			insert ar
+			gbar_ar =   0.25E-3
+			insert cad
+			beta_cad  =   0.02
+			phi_cad =   52000.
+			ceiling_cad = 1e6
+			
+			ek =  -95.
+			e_pas =  -70.
+			ena =   50.
+			vca =   125.
+			erev_ar =  -35.
+		} 
+	}
+	if (strcmp($s1, "handtuned") == 0) {  
+		soma { 
+			insert pas 
+			g_pas =  0.04E-3
+			cm = 1
+			
+			insert naf_tcr
+			gbar_naf_tcr =   100.E-3
+			insert kdr
+			gbar_kdr =   33.75E-3
+			insert ka
+			gbar_ka =   6E-3
+			insert k2
+			gbar_k2 =   2E-3
+			insert cat
+			gbar_cat =   0.75E-3
+			insert ar
+			gbar_ar =   0.25E-3
+			
+			e_pas =  -70.
+			ena =   50.
+			vca =   125.
+			erev_ar =  -35.	
+			ek = -95
+		}
+	}	
+} 
+endtemplate TCcell
+
+

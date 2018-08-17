@@ -1,0 +1,364 @@
+xopen("TC_template.hoc") 
+xopen("TRN_template.hoc") 
+xopen("RS_template.hoc") 
+
+objref param_list, const_list
+proc init_const_param() { local i 
+	const_list = new List()
+	const_list.append(new String("tstart"))
+	const_list.append(new String("tstop"))
+	const_list.append(new String("dt"))
+	const_list.append(new String("sampled_dt")) 
+	const_list.append(new String("v_init"))
+	const_list.append(new String("NUM_TRIALS")) 
+	const_list.append(new String("NUM_CONDITIONS"))
+	const_list.append(new String("syn_delay"))
+	const_list.append(new String("spk_det_thr")) 
+	const_list.append(new String("MEAN_ISI_TRN"))
+	const_list.append(new String("MEAN_ISI_TC"))
+	const_list.append(new String("MEAN_ISI_RS"))	
+	param_list = new List() 
+	param_list.append(new String("g_GABAR_TRN2TC")) 
+	param_list.append(new String("ratioGABARfast"))
+	param_list.append(new String("g_AMPAR_TC2TRN"))
+	param_list.append(new String("g_AMPAR_TC2RS"))
+	param_list.append(new String("g_Poiss_Inps"))
+	param_list.append(new String("I_inj_TRN"))
+	param_list.append(new String("I_inj_TC"))
+
+	strdef local_str 
+	for i=0,const_list.count()-1 { 
+		sprint(local_str, "%s = 0", const_list.o[i].s)
+		execute(local_str) 
+	} 
+	for i=0,param_list.count()-1 { 
+		sprint(local_str, "%s = 0", param_list.o[i].s)
+		execute(local_str) 
+	} 
+}
+init_const_param() 
+
+proc set_vec() { local i
+	$o1 = new Vector(numarg()-1) 
+	for i=2,numarg() { 
+		$o1.x[i-2]=$i
+	}
+}
+
+proc set_string_list() { local i 
+	$o1 = new List() 
+	for i=2,numarg() { 
+		$o1.append(new String($si))
+	}
+}
+
+proc print_string_list() { local i 
+	for i=0,$o1.count()-1{
+		printf("%s\t",$o1.o[i].s)
+	}
+}
+
+proc print_vector() { local i 
+	for i=0,$o1.size()-1 { 
+		printf("%g\t",$o1.x[i])
+		if (i%8 == 0) { print ""} 
+	}
+	print "" 
+} 
+
+objref inj_amp, inj_dur, hold_amp, tswitch
+objref cells[3], Iholds_bef[3], Iinjs[3], Iholds_aft[3], cell_mod[3]
+
+proc set_cell_mod() { local i 
+	for i=1,3 { cell_mod[i-1] = new String($si) } 
+} 
+
+proc create_cells() { local i 
+	for i=0,2 { 
+		strdef excstr 
+		sprint(excstr, "cells[%d] = new %s",i,cell_mod[i].s)
+		execute(excstr) 
+		
+		cells[i].soma Iholds_bef[i] = new IClamp(0.5) 
+		cells[i].soma Iinjs[i]  	= new IClamp(0.5) 
+		cells[i].soma Iholds_aft[i] = new IClamp(0.5) 
+		
+		Iholds_bef[i].del = tstart
+		Iholds_bef[i].dur = tswitch.x[i] 
+		Iholds_bef[i].amp = hold_amp.x[i] 
+		
+		Iinjs[i].del = tstart + tswitch.x[i] 
+		Iinjs[i].dur = inj_dur.x[i]  
+		Iinjs[i].amp = inj_amp.x[i]
+				
+		Iholds_aft[i].del = tstart + tswitch.x[i] + inj_dur.x[i] 
+		Iholds_aft[i].dur = tstop
+		Iholds_aft[i].amp = hold_amp.x[i] 
+	}
+}
+
+objref ncl, synapses[7] 
+objref Poiss_VecStim[3]
+
+proc create_conns() { local i 
+	ncl = new List() 
+	// TRN --| TC
+	cells[1].soma synapses[0] = new AMPA(0.5) 	// GABAR used same mechanism of AMPAR 
+	synapses[0].e = -80                       	// just changed Erev
+	synapses[0].tau = 3.3 						// and have a fast (tau = 3.3ms) + slow component (tau = 10ms)
+	cells[1].soma synapses[1] = new AMPA(0.5) 
+	synapses[1].e = -80 
+	synapses[1].tau = 10.0 
+	cells[0].soma ncl.append(new NetCon(&v(0.5), synapses[0], spk_det_thr,syn_delay,g_GABAR_TRN2TC * ratioGABARfast))
+	cells[0].soma ncl.append(new NetCon(&v(0.5), synapses[1], spk_det_thr,syn_delay,g_GABAR_TRN2TC * (1.0-ratioGABARfast)))
+	// TC --> TRN
+	cells[0].soma synapses[2] = new AMPA(0.5) 
+	synapses[2].tau = 2.0  
+	cells[1].soma ncl.append(new NetCon(&v(0.5), synapses[2], spk_det_thr,syn_delay,g_AMPAR_TC2TRN))
+	// TC --> RS
+	cells[2].soma synapses[3] = new AMPA(0.5) 
+	synapses[3].tau = 2.0 
+	cells[1].soma ncl.append(new NetCon(&v(0.5), synapses[3], spk_det_thr,syn_delay,g_AMPAR_TC2RS))
+	// Poiss --> TRN, TC, RS
+	for i = 0,2 { 
+		cells[i].soma synapses[i+4] = new AMPA(0.5) 
+		synapses[i+4].tau = 1.0 
+		Poiss_VecStim[i] = new VecStim()  
+		ncl.append(new NetCon(Poiss_VecStim[i], synapses[i+4]))
+		if (strcmp($s1, "no_noise") == 0) { 
+			ncl.o[ncl.count()-1].weight = 0 
+		} else { 
+			ncl.o[ncl.count()-1].weight = g_Poiss_Inps
+			ncl.o[ncl.count()-1].delay 	= syn_delay
+		}
+	}
+} 
+
+seed_ = xred("Input seed: ", 100, 0, 1e6)
+objref Poiss_ISI, Poiss_SpkT, Rand_Obj
+Rand_Obj = new Random(seed_) 
+Rand_Obj.MCellRan4()
+Rand_Obj.uniform(0,1) 
+
+proc shift_time() { local i 
+	for i=0,$o1.size()-1 { $o1.x[i] = $o1.x[i] + $2 }
+}
+
+proc reset_Poiss_Timings() { 
+	if (strcmp($s3, "no_reset") != 0) {  
+		Rand_Obj.repick()
+		Poiss_ISI = new Vector(int(tstop/$2))
+		Poiss_ISI.setrand(Rand_Obj).log().mul(-$2)
+		Poiss_SpkT = new Vector()
+		Poiss_SpkT.integral(Poiss_ISI)
+		shift_time(Poiss_SpkT, tstart - 50)
+	}
+	Poiss_VecStim[$1].play(Poiss_SpkT)
+}
+
+/* TEST_sAVE16 and TEST_SAVE17_0 is 20ms for TC, 50ms RS
+
+*/
+proc set_Poiss_Timings()  {
+	reset_Poiss_Timings(0, MEAN_ISI_TRN, $s1)   	// TRN
+	reset_Poiss_Timings(1, MEAN_ISI_TC,   $s1)    	// TC - mess with 20, 40 and 50 
+	reset_Poiss_Timings(2, MEAN_ISI_RS,   $s1)   	// RS - mess with 20, 40, 50 
+} 
+
+objref rec_time, rec_cell[3], rec_spkt[3], nc_ap[3], nil[3]
+proc record_data() { local i 
+	rec_time = new Vector()
+	rec_time.record(&t, sampled_dt) 
+	for i=0,2 { 
+		rec_cell[i] = new Vector() 
+		rec_cell[i].record(&cells[i].soma.v(0.5), sampled_dt) 
+		
+		rec_spkt[i] = new Vector() 
+		cells[i].soma nc_ap[i] = new NetCon(&v(0.5), nil[i]) 
+		nc_ap[i].threshold = spk_det_thr 
+		nc_ap[i].record(rec_spkt[i])
+	} 
+}
+
+strdef cnst_prm_ls  
+proc update_const_param_list() { local i 
+	cnst_prm_ls = "" 
+	strdef local_str
+	for i=0,const_list.count()-1 { 
+		sprint(local_str, "TMP_VAL = %s", const_list.o[i].s)
+		execute(local_str)
+		sprint(cnst_prm_ls, "%s! CONST %s = %g \n", cnst_prm_ls, const_list.o[i].s, TMP_VAL)
+	} 
+	for i=0,param_list.count()-1 { 
+		sprint(local_str, "TMP_VAL = %s", param_list.o[i].s)
+		execute(local_str)
+		sprint(cnst_prm_ls, "%s! PARAM %s = %g \n", cnst_prm_ls, param_list.o[i].s, TMP_VAL)
+	}
+}
+
+objref cond_alias 
+
+proc set_condition_alias() { 
+	if (numarg() == 0) { 
+		cond_alias = new List() 
+	} else { 
+		if (cond_alias.count() < NUM_CONDITIONS) {
+			cond_alias.append(new String($s1)) 
+		} else { 
+			print "Number of conditions alias has reached \"NUM_CONDITIONS\", will not append more elements" 
+		}
+	}
+}
+
+proc save_header() {  local i 
+	update_const_param_list()
+	$o1.aopen($s2)
+	strdef cnst_prm_str
+	sprint(cnst_prm_str, "VARIATION_ID %06d\nSTART_CONST_PARAM\n%sEND_CONST_PARAM\n", $3, cnst_prm_ls) 
+	$o1.printf(cnst_prm_str) 
+	
+	$o1.printf("START_CONDITION_LIST\n") 
+	for i=0,NUM_CONDITIONS-1 { $o1.printf("%d\t%s\n", i, cond_alias.o[i].s) }
+	$o1.printf("END_CONDITION_LIST\n") 
+	
+	strdef ids_str
+	ids_str = "VARIABLE_NAMES \t time" 
+	for i=0,2 { sprint(ids_str, "%s \t %s", ids_str, cell_mod[i].s) } 
+	sprint(ids_str, "%s \n", ids_str) 
+	$o1.printf(ids_str) 
+} 
+
+objref matrix2save, spkt2save
+proc save_data() { local i 
+	$o1.aopen($s2)
+	strdef trial_cond
+	sprint(trial_cond, "CONDITION %s\nTRIAL %03d\n", $s3, $4) 
+	$o1.printf(trial_cond)
+	
+	$o1.printf("START_SAMPLED_DATA\n")
+	matrix2save = new Matrix(rec_time.size(), 4)
+	matrix2save.setcol(0, rec_time)
+	for i=0,2 { matrix2save.setcol(i+1, rec_cell[i]) } 
+	matrix2save.fprint($o1, "%g\t") 
+	$o1.printf("END_SAMPLED_DATA\n")
+	
+	$o1.printf("START_SPIKE_TIMES\n")
+	for i=0,2 { 
+		nspk = rec_spkt[i].size()
+		$o1.printf("CELL %03d \t nAPs = %d\n", i, nspk)
+		if (nspk > 0) {		
+			spkt2save = new Matrix(nspk,1)
+			spkt2save.setcol(0, rec_spkt[i])
+			spkt2save = spkt2save.transpose 
+			spkt2save.fprint($o1, "%g\t") 
+		} 
+	}
+	$o1.printf("END_SPIKE_TIMES\n")
+}
+
+objref savdat 
+strdef file_name
+proc cust_init_and_run() { // customized each time 
+	// 				 TRN,		TC, 		RS 
+	set_vec(inj_amp, $1, 		I_inj_TC, 	0.0)     // vary TRN Iinj while keeping TC inj fixed; no inj -> RS 
+	set_vec(inj_dur, 250, 		50, 		0.0)     // 250ms BLA->TRN; 50ms tone->TC; no inj -> RS 
+	set_vec(hold_amp,0.0, 		1.0, 		0.5)     // hold b4: from tstart to tswitch; hold after: after tinj+inj_dur 
+	set_vec(tswitch, 100, 		200, 		10)      // from tstart to tinj 
+
+	create_cells()                  // create the cells to prepare for sim
+	if ($2 == 0) { 
+		create_conns("no_noise")    // 0 (1st sim) -> no noise 
+	} else { 
+		create_conns("with_noise")  // not 0 (later sims) -> with Poiss inputs 
+	} 
+	set_Poiss_Timings("reset")      // generate new set of poiss input times 
+	
+	record_data()
+	init() 
+	run() 
+	save_data(savdat, file_name, $s3, $2)
+	
+	printf("\t %s - TRIAL # %02d\n", $s3, $2)
+} 
+
+// Choose from which models in the templates 
+set_cell_mod("TRNcell(\"haas2012\")", 	"TCcell(\"handtuned\")", 	"RScell(\"handtuned\")")
+			// "phamhaas" or "haas2012" 
+
+tstart 			= 100
+tstop 			= 600 
+dt 				= 5E-3
+sampled_dt 		= 1E-1
+v_init 			= -60
+MEAN_ISI_TRN 	= 1000   // 1 Hz For Poiss 
+MEAN_ISI_TC 	= 20     // 50 Hz
+MEAN_ISI_RS 	= 50     // 20 Hz 
+NUM_TRIALS 		= 50     
+
+objref injTRN_vec, cond_str_list 
+set_vec(injTRN_vec, 0, 0.5, 0.8, 1.1, 1.5, 1.8) 
+NUM_CONDITIONS 	= injTRN_vec.size() 
+
+cond_str_list = new List() 
+set_condition_alias()
+for i_vec=0,injTRN_vec.size()-1 { 
+	strdef tmp_str_cond
+	if (i_vec==0) { 
+		cond_str_list.append(new String("LIGHT_OFF"))
+	} else { 
+		sprint(tmp_str_cond, "LIGHT_LVL_%02d", i_vec)
+		cond_str_list.append(new String(tmp_str_cond))
+	} 
+	sprint(tmp_str_cond, "%s | Inj_TRN = %g", cond_str_list.o[cond_str_list.count()-1].s, injTRN_vec.x[i_vec]) 
+	set_condition_alias(tmp_str_cond)
+}
+				
+syn_delay 		= 2
+spk_det_thr		= 25 
+
+g_GABAR_TRN2TC 	= 0.05
+ratioGABARfast 	= 0.5
+g_AMPAR_TC2TRN 	= 0.025
+g_AMPAR_TC2RS  	= 0.2
+g_Poiss_Inps   	= 0.5 
+I_inj_TRN 		= 1.8 // here this is max
+I_inj_TC 		= 10  // max as well 
+
+objref injTC_vec, gGABAR2TC_vec, gAMPAR2TRN_vec, gAMPAR2RS_vec
+set_vec(gGABAR2TC_vec, g_GABAR_TRN2TC)          // add more values in these vectors if wanted 
+set_vec(gAMPAR2TRN_vec, g_AMPAR_TC2TRN)         // more variations of these parameters 
+set_vec(gAMPAR2RS_vec, g_AMPAR_TC2RS) 
+set_vec(injTC_vec, 10.0)
+
+file_count = 0 
+for i_gGABAR = 0,gGABAR2TC_vec.size() - 1 { 
+	g_GABAR_TRN2TC = gGABAR2TC_vec.x[i_gGABAR]
+	
+	for i_gAMPAR2TRN = 0,gAMPAR2TRN_vec.size() - 1 { 
+		g_AMPAR_TC2TRN = gAMPAR2TRN_vec.x[i_gAMPAR2TRN]
+		
+		for i_gAMPAR2RS = 0,gAMPAR2RS_vec.size() - 1 { 
+			g_AMPAR_TC2RS = gAMPAR2RS_vec.x[i_gAMPAR2RS] 
+			
+			for i_injTC=0,injTC_vec.size() - 1 { 
+				I_inj_TC = injTC_vec.x[i_injTC]
+				sprint(file_name, "trn_aud_%03d.dat", file_count)
+				printf("--> Running file:  %s \n", file_name)
+				init() 
+				savdat = new File() 
+				save_header(savdat, file_name, file_count) 
+				print cnst_prm_str
+				for trial_id=0,NUM_TRIALS{
+					for i_injTRN=0,injTRN_vec.size()-1 { 
+						cust_init_and_run(injTRN_vec.x[i_injTRN], trial_id, cond_str_list.o[i_injTRN].s) 
+					}
+				}
+
+				savdat.close()
+				file_count = file_count+1
+				printf("--> Closing file:  %s \n", file_name)
+			}
+		}
+	} 
+} 
+

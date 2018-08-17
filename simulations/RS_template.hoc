@@ -1,0 +1,73 @@
+begintemplate RScell
+public soma 
+create soma 
+proc init() { 
+	create soma 
+	if (strcmp($s1, "traub2005") == 0) {   
+		soma { 
+			insert pas    
+			g_pas =  2.E-05
+			cm = 0.9
+			insert naf
+			gbar_naf =   0.2
+			insert nap
+			gbar_nap =   0.0008
+			insert kdr
+			gbar_kdr =   0.17
+			insert kc
+			gbar_kc =   0.008
+			insert ka
+			gbar_ka =   0.02
+			insert km
+			gbar_km =   0.0085
+			insert k2
+			gbar_k2 =   0.0005
+			insert kahp_deeppyr
+			gbar_kahp_deeppyr =   0.0002
+			insert cal
+			gbar_cal =   0.004
+			insert cat
+			gbar_cat =   0.0001
+			insert ar
+			gbar_ar =   0.0001
+			insert cad
+			beta_cad  =   0.01
+			phi_cad =   4333.33333
+				
+			ek =  -95.
+			e_pas =  -70.
+			ena =   50.
+			vca =   125.
+			erev_ar =  -35.
+		} 
+	}
+	if (strcmp($s1, "handtuned") == 0) {  
+		soma { 
+			insert pas 
+			g_pas =  0.04E-3
+			cm = 1
+			
+			insert naf_tcr
+			gbar_naf_tcr =   200.E-3
+			insert kdr
+			gbar_kdr =   170E-3
+			insert ka
+			gbar_ka =   20E-3
+			insert k2
+			gbar_k2 =   0.5E-3
+			insert cat
+			gbar_cat =   0.1E-3
+			insert ar
+			gbar_ar =   0.1E-3
+			
+			ek =  -95.
+			e_pas =  -70.
+			ena =   50.
+			vca =   125.
+			erev_ar =  -35.
+		}
+	}	
+} 
+endtemplate RScell
+
+
